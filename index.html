@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Ubuntu风格计算器</title>
+    <title>Calculator</title>
     <style>
         body {
             background: #f2f2f2;
@@ -396,16 +396,19 @@
             try {
                 const rawExpr = display.value;
                 let processedExpr = parseExpression(rawExpr);
+                console.info("计算公式:", processedExpr);
     
                 // Wrap eval in a sandboxed context for safety
                 const result = Function('"use strict";return (' + processedExpr + ')')();
     
+                //* [TODO] We need a better solution here to make cos(90)=0, sin(30)=0.5, 2*1e-100=2e-100, 9*0.00000000000001=9e-14, 0.1+0.2=0.3.
                 const finalResult = result
-                // [TODO] We need a better solution here to make cos(90)=0, sin30)=0.5, 2*1e-100=2e-100. 
                 // finalResult = result.toPrecision(10).replace(/\.?0+$/, '');
                 // if (result < 1e-10) {
                 //     finalResult = '0';
                 // }
+
+                console.info("计算结果:", finalResult);
 
                 const entry = { expression: rawExpr, result: finalResult };
                 historyEntries.push(entry);
