@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ubuntu风格计算器</title>
     <style>
         body {
@@ -10,29 +11,30 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
+            padding: 10px;
         }
         .calculator {
             background: #fff;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            padding: 20px;
-            width: 360px;
-            max-height: 90vh;
-            overflow-y: auto;
+            padding: 15px;
+            width: 100%;
+            max-width: 400px;
+            box-sizing: border-box;
         }
         .history {
             max-height: 150px;
             overflow-y: auto;
-            margin-bottom: 15px;
-            padding: 10px;
+            margin-bottom: 12px;
+            padding: 8px;
             background: #e9e9e9;
             border-radius: 5px;
         }
         .history-entry {
-            padding: 5px;
-            font-size: 0.9em;
+            padding: 4px 6px;
+            font-size: 0.85em;
             color: #555;
             display: flex;
             justify-content: space-between;
@@ -43,10 +45,10 @@
             background: #e9e9e9;
             border: none;
             border-radius: 5px;
-            font-size: 2em;
+            font-size: 2.2em;
             text-align: right;
-            padding: 15px;
-            margin-bottom: 15px;
+            padding: 18px;
+            margin-bottom: 12px;
             height: 60px;
             box-sizing: border-box;
             width: 100%;
@@ -54,17 +56,18 @@
         .buttons {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 10px;
+            gap: 8px;
         }
         button {
-            padding: 20px;
-            font-size: 1.2em;
+            padding: 18px;
+            font-size: 1.5em;
             border: none;
             border-radius: 8px;
             background: #f0f0f0;
             color: #333;
             cursor: pointer;
             transition: all 0.2s ease;
+            touch-action: manipulation;
         }
         button.operator {
             background: #ff9500;
@@ -105,19 +108,20 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             max-height: 60vh;
             overflow-y: auto;
-            min-width: 300px;
+            min-width: 280px;
+            width: 80vw;
         }
         .function-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            gap: 6px;
         }
         .function-item {
-            padding: 8px;
+            padding: 6px 4px;
             border-radius: 3px;
             cursor: pointer;
             transition: background 0.2s;
-            font-size: 0.9em;
+            font-size: 0.85em;
         }
         .function-item:hover {
             background: #f0f0f0;
@@ -130,32 +134,45 @@
             font-size: 0.75em;
             color: #7f8c8d;
         }
-        /* Custom error modal styles */
         .error-modal {
             position: fixed;
             top: 20px;
             right: 20px;
             background: #ff4d4d;
             color: white;
-            padding: 15px 20px;
+            padding: 12px 18px;
             border-radius: 5px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             z-index: 10000;
             animation: slideIn 0.3s ease forwards;
         }
-        
         .error-modal::after {
             content: "×";
             position: absolute;
-            top: 5px;
-            right: 10px;
+            top: 3px;
+            right: 8px;
             font-size: 1.2em;
             cursor: pointer;
         }
-        
         @keyframes slideIn {
             from {transform: translateX(100%);}
             to {transform: translateX(0);}
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 480px) {
+            .display {
+                font-size: 2em;
+                padding: 16px;
+                height: 56px;
+            }
+            button {
+                padding: 16px;
+                font-size: 1.4em;
+            }
+            .function-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
         }
     </style>
 </head>
@@ -255,10 +272,12 @@
             }
             functionPanel.style.display = 'none';
         }
-    
         document.addEventListener('keydown', (e) => {
             if (document.activeElement !== display) return;
-            if (/^[0-9]$/.test(e.key)) {
+            if (e.key === '=' || e.key === 'Enter') {
+                calculate();
+                e.preventDefault();
+            } else if (/^[0-9]$/.test(e.key)) {
                 appendValue(e.key);
                 e.preventDefault();
             } else if (['+', '-', '*', '/'].includes(e.key)) {
@@ -269,9 +288,6 @@
                 e.preventDefault();
             } else if (e.key === '(' || e.key === ')') {
                 appendValue(e.key);
-                e.preventDefault();
-            } else if (e.key === '=' || e.key === 'Enter') {
-                calculate();
                 e.preventDefault();
             } else if (e.key === 'Tab') {
                 clearDisplay();
@@ -337,8 +353,8 @@
                 { name: 'atan', target: 'Math.atan', convert_output: 'toDegrees' },
                 
                 // 其他数学函数
-                { name: 'ln', target: 'Math.log' },
                 { name: 'log', target: 'Math.log10' },
+                { name: 'ln', target: 'Math.log' },
                 { name: 'exp', target: 'Math.exp' },
                 { name: 'sqrt', target: 'Math.sqrt' },
                 { name: 'abs', target: 'Math.abs' },
@@ -397,6 +413,7 @@
                 display.value = finalResult.toString();
                 display.setSelectionRange(display.value.length, display.value.length);
             } catch (error) {
+                console.error("计算错误详情:", error);
                 showErrorMessage();
             }
         }
