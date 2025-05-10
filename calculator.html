@@ -13,7 +13,6 @@
             height: 100vh;
             margin: 0;
         }
-        
         .calculator {
             background: #fff;
             border-radius: 10px;
@@ -23,7 +22,6 @@
             max-height: 90vh;
             overflow-y: auto;
         }
-        
         .history {
             max-height: 150px;
             overflow-y: auto;
@@ -32,7 +30,6 @@
             background: #e9e9e9;
             border-radius: 5px;
         }
-        
         .history-entry {
             padding: 5px;
             font-size: 0.9em;
@@ -42,7 +39,6 @@
             border-bottom: 1px solid #ddd;
             cursor: pointer;
         }
-        
         .display {
             background: #e9e9e9;
             border: none;
@@ -55,54 +51,111 @@
             box-sizing: border-box;
             width: 100%;
         }
-        
         .buttons {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             gap: 10px;
         }
-        
         button {
             padding: 20px;
             font-size: 1.2em;
             border: none;
-            border-radius: 50%;
+            border-radius: 8px;
             background: #f0f0f0;
             color: #333;
             cursor: pointer;
             transition: all 0.2s ease;
         }
-        
         button.operator {
             background: #ff9500;
             color: white;
         }
-        
         button.equals {
             background: #28a745;
             color: white;
         }
-        
         button.zero {
             grid-column: span 2;
-            border-radius: 50px;
+            border-radius: 8px;
         }
-        
         button:hover {
             background: #ddd;
         }
-        
         button.operator:hover {
             background: #ffaa33;
         }
-        
         button.clear {
             background: #ff4d4d;
             color: white;
         }
-        
         button.clear:hover {
             background: #ff6666;
+        }
+        .function-panel {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            z-index: 9999;
+            display: none;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-height: 60vh;
+            overflow-y: auto;
+            min-width: 300px;
+        }
+        .function-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .function-item {
+            padding: 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 0.9em;
+        }
+        .function-item:hover {
+            background: #f0f0f0;
+        }
+        .function-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .function-desc {
+            font-size: 0.75em;
+            color: #7f8c8d;
+        }
+        /* Custom error modal styles */
+        .error-modal {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ff4d4d;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 10000;
+            animation: slideIn 0.3s ease forwards;
+        }
+        
+        .error-modal::after {
+            content: "×";
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 1.2em;
+            cursor: pointer;
+        }
+        
+        @keyframes slideIn {
+            from {transform: translateX(100%);}
+            to {transform: translateX(0);}
         }
     </style>
 </head>
@@ -114,171 +167,267 @@
             <button class="clear" onclick="clearDisplay()">C</button>
             <button onclick="appendValue('(')">(</button>
             <button onclick="appendValue(')')">)</button>
-            <button class="operator" onclick="appendOperator('/')">÷</button>
-            
+            <button class="operator" onclick="appendOperator('-')">−</button>
             <button onclick="appendValue('7')">7</button>
             <button onclick="appendValue('8')">8</button>
             <button onclick="appendValue('9')">9</button>
             <button class="operator" onclick="appendOperator('*')">×</button>
-            
             <button onclick="appendValue('4')">4</button>
             <button onclick="appendValue('5')">5</button>
             <button onclick="appendValue('6')">6</button>
-            <button class="operator" onclick="appendOperator('-')">−</button>
-            
+            <button class="operator" onclick="appendOperator('/')">÷</button>
             <button onclick="appendValue('1')">1</button>
             <button onclick="appendValue('2')">2</button>
             <button onclick="appendValue('3')">3</button>
             <button class="operator" onclick="appendOperator('+')">+</button>
-            
-            <button onclick="toggleSign()">±</button>
+            <button class="operator" onclick="toggleFunctionPanel()">FNC</button>
             <button onclick="appendValue('0')">0</button>
             <button onclick="appendValue('.')">.</button>
             <button class="equals" onclick="calculate()">=</button>
+        </div>
+        <div id="functionPanel" class="function-panel">
+            <div class="function-grid" id="functionGrid"></div>
+        </div>
+        
+        <!-- Error modal -->
+        <div id="errorModal" class="error-modal" style="display: none;">
+            计算错误，请检查输入！
         </div>
     </div>
 
     <script>
         const display = document.getElementById('display');
         const historyContainer = document.getElementById('history');
+        const functionPanel = document.getElementById('functionPanel');
         let historyEntries = [];
-
-        // 键盘事件处理
+        const mathFunctions = [
+            { name: 'sqrt', description: '平方根' },
+            { name: 'exp', description: '指数函数' },
+            { name: 'ln', description: '自然对数' },
+            { name: 'log', description: '常用对数' },
+            { name: 'sin', description: '正弦函数' },
+            { name: 'cos', description: '余弦函数' },
+            { name: 'tan', description: '正切函数' },
+            { name: 'asin', description: '反正弦函数' },
+            { name: 'acos', description: '反余弦函数' },
+            { name: 'atan', description: '反正切函数' },
+            { name: 'abs', description: '绝对值' },
+            { name: 'round', description: '四舍五入' },
+            { name: 'floor', description: '向下取整' },
+            { name: 'ceil', description: '向上取整' },
+            { name: 'max', description: '最大值' },
+            { name: 'min', description: '最小值' },
+            { name: 'pow', description: '幂运算' },
+            { name: 'random', description: '随机数' },
+            { name: 'pi', description: '圆周率 π' },
+            { name: 'e', description: '自然常数 e' }
+        ];
+    
+        const errorModal = document.getElementById('errorModal');
+    
+        function initFunctionPanel() {
+            const grid = document.getElementById('functionGrid');
+            grid.innerHTML = '';
+            mathFunctions.forEach(func => {
+                const item = document.createElement('div');
+                item.className = 'function-item';
+                item.innerHTML = `
+                    <div class="function-name">${func.name}</div>
+                    <div class="function-desc">${func.description}</div>
+                `;
+                item.addEventListener('click', () => insertFunction(func.name));
+                grid.appendChild(item);
+            });
+        }
+    
+        function toggleFunctionPanel() {
+            functionPanel.style.display = functionPanel.style.display === 'block' ? 'none' : 'block';
+        }
+    
+        function insertFunction(funcName) {
+            display.focus();
+            if (funcName === 'pi') {
+                display.setRangeText('pi', display.selectionStart, display.selectionEnd, 'end');
+            } else if (funcName === 'e') {
+                display.setRangeText('e', display.selectionStart, display.selectionEnd, 'end');
+            } else {
+                display.setRangeText(funcName + '(', display.selectionStart, display.selectionEnd, 'end');
+            }
+            functionPanel.style.display = 'none';
+        }
+    
         document.addEventListener('keydown', (e) => {
             if (document.activeElement !== display) return;
-            
-            // 数字键
             if (/^[0-9]$/.test(e.key)) {
                 appendValue(e.key);
                 e.preventDefault();
-            }
-            // 运算符
-            else if (['+', '-', '*', '/'].includes(e.key)) {
+            } else if (['+', '-', '*', '/'].includes(e.key)) {
                 appendOperator(e.key);
                 e.preventDefault();
-            }
-            // 小数点
-            else if (e.key === '.') {
+            } else if (e.key === '.') {
                 appendValue('.');
                 e.preventDefault();
-            }
-            // 括号
-            else if (e.key === '(' || e.key === ')') {
+            } else if (e.key === '(' || e.key === ')') {
                 appendValue(e.key);
                 e.preventDefault();
-            }
-            // 等于号/回车
-            else if (e.key === '=' || e.key === 'Enter') {
+            } else if (e.key === '=' || e.key === 'Enter') {
                 calculate();
                 e.preventDefault();
-            }
-            // 删除键
-            else if (e.key === 'Backspace') {
-                display.value = display.value.slice(0, -1);
-                e.preventDefault();
-            }
-            // 清除
-            else if (e.key.toLowerCase() === 'c') {
+            } else if (e.key === 'Tab') {
                 clearDisplay();
                 e.preventDefault();
             }
         });
-
+    
         function appendValue(value) {
             display.focus();
-            if (display.value === '错误' || display.selectionStart === 0 && display.value.includes('=')) {
+            if (display.selectionStart === 0 && display.value.includes('=')) {
                 display.value = value;
             } else {
                 display.setRangeText(value, display.selectionStart, display.selectionEnd, 'end');
             }
         }
-        
+    
         function appendOperator(operator) {
-            if (display.value === '错误') display.value = '';
-            const lastChar = display.value.slice(-1);
-            if ('+-*/'.includes(lastChar)) {
-                display.value = display.value.slice(0, -1) + operator;
+            display.focus();
+            const currentValue = display.value;
+            const cursorPos = display.selectionStart;
+            const exprBeforeCursor = currentValue.substring(0, cursorPos);
+            const lastChar = exprBeforeCursor.slice(-1);
+            if (operator === '-' && (exprBeforeCursor === '' || '+-*/('.includes(lastChar))) {
+                display.setRangeText('-', cursorPos, cursorPos, 'end');
             } else {
-                display.setRangeText(operator, display.selectionStart, display.selectionEnd, 'end');
+                display.setRangeText(operator, cursorPos, cursorPos, 'end');
             }
         }
-        
+    
         function clearDisplay() {
             display.focus();
             display.value = '';
         }
-        
-        function toggleSign() {
-            if (display.value === '') return;
-            try {
-                const expr = display.value.replace(/÷/g, '/').replace(/×/g, '*');
-                const result = eval(expr);
-                display.value = (-result).toString();
-            } catch (e) {
-                if (display.value.startsWith('-')) {
-                    display.value = display.value.substring(1);
-                } else {
-                    display.value = '-' + display.value;
-                }
-            }
+    
+        function showErrorMessage() {
+            errorModal.style.display = 'block';
+            setTimeout(() => {
+                errorModal.style.display = 'none';
+            }, 1000);
         }
-        
+        function parseExpression(expr) {
+            // 处理中文括号问题并替换数学符号
+            expr = expr.replace(/（/g, '(').replace(/）/g, ')');
+            
+            // 替换运算符和常量
+            expr = expr
+                .replace(/÷/g, '/')
+                .replace(/×/g, '*')
+                .replace(/\^/g, '**')
+                .replace(/\bpi\b/gi, 'Math.PI')
+                .replace(/\be\b/gi, 'Math.E');
+            
+            // 替换数学函数（带括号参数）
+            const functionMappings = [
+                // 三角函数（角度转弧度）
+                { name: 'sin', target: 'Math.sin', convert_input: 'toRadians' },
+                { name: 'cos', target: 'Math.cos', convert_input: 'toRadians' },
+                { name: 'tan', target: 'Math.tan', convert_input: 'toRadians' },
+                
+                // 反三角函数（弧度转角度）
+                { name: 'asin', target: 'Math.asin', convert_output: 'toDegrees' },
+                { name: 'acos', target: 'Math.acos', convert_output: 'toDegrees' },
+                { name: 'atan', target: 'Math.atan', convert_output: 'toDegrees' },
+                
+                // 其他数学函数
+                { name: 'ln', target: 'Math.log' },
+                { name: 'log', target: 'Math.log10' },
+                { name: 'exp', target: 'Math.exp' },
+                { name: 'sqrt', target: 'Math.sqrt' },
+                { name: 'abs', target: 'Math.abs' },
+                { name: 'round', target: 'Math.round' },
+                { name: 'floor', target: 'Math.floor' },
+                { name: 'ceil', target: 'Math.ceil' }
+            ];
+            
+            // 处理单参数函数
+            functionMappings.forEach(func => {
+                const regex = new RegExp(`\\b${func.name}\\(([^)]+)\\)`, 'gi');
+                if (func.convert_input) {
+                    expr = expr.replace(regex, `${func.target}(${func.convert_input}($1))`);
+                } else if (func.convert_output) {
+                    expr = expr.replace(regex, `${func.convert_output}(${func.target}($1))`);
+                } else {
+                    expr = expr.replace(regex, `${func.target}($1)`);
+                }
+            });
+            
+            // 处理多参数函数
+            expr = expr
+                .replace(/\bmax\(([^)]+)\)/gi, 'Math.max($1)')
+                .replace(/\bmin\(([^)]+)\)/gi, 'Math.min($1)')
+                .replace(/\bpow\(([^,]+),([^)]+)\)/gi, 'Math.pow($1, $2)')
+                .replace(/\brandom\(\)/gi, 'Math.random()');
+            
+            return expr;
+        }
+
+        function toRadians(degrees) {
+            return degrees * Math.PI / 180;
+        }
+
+        function toDegrees(radians) {
+            return radians * 180 / Math.PI;
+        }
         function calculate() {
             try {
                 const rawExpr = display.value;
-                
-                // 支持数学常量和函数
-                const processedExpr = rawExpr
-                    .replace(/÷/g, '/')
-                    .replace(/×/g, '*')
-                    .replace(/\^/g, '**')
-                    .replace(/\b(pi)\b/gi, 'Math.PI')
-                    .replace(/\b(e)\b/gi, 'Math.E')
-                    .replace(/\b(ln)\b/gi, 'Math.log')
-                    .replace(/Math\.log$([^)]+)$/g, 'Math.log($1)')
-                    .replace(/\b(sin|cos|tan|sqrt|abs)\b/gi, 'Math.$1')
-                    .replace(/Math\.(sin|cos|tan)$([^)]+)$/g, (match, func, arg) => {
-                        return `Math.${func}(${arg} * Math.PI / 180)`;
-                    });
+                let processedExpr = parseExpression(rawExpr);
+    
+                // Wrap eval in a sandboxed context for safety
+                const result = Function('"use strict";return (' + processedExpr + ')')();
+    
+                const finalResult = result
+                // [TODO] We need a better solution here to make cos(90)=0, sin30)=0.5, 2*1e-100=2e-100. 
+                // finalResult = result.toPrecision(10).replace(/\.?0+$/, '');
+                // if (result < 1e-10) {
+                //     finalResult = '0';
+                // }
 
-                const result = eval(processedExpr);
-                
-                // 添加历史记录条目
-                const entry = { expression: rawExpr, result: result };
+                const entry = { expression: rawExpr, result: finalResult };
                 historyEntries.push(entry);
                 updateHistory();
-                
-                // 显示计算结果（仅显示数字）
-                display.value = result.toString();
+                display.value = finalResult.toString();
                 display.setSelectionRange(display.value.length, display.value.length);
             } catch (error) {
-                display.value = '错误';
+                showErrorMessage();
             }
         }
-
+    
         function updateHistory() {
             historyContainer.innerHTML = '';
             historyEntries.forEach((entry, index) => {
                 const div = document.createElement('div');
                 div.className = 'history-entry';
                 div.innerHTML = `<div>${entry.expression}</div><div>= ${entry.result}</div>`;
-                
-                // 点击公式部分重新编辑
                 div.children[0].addEventListener('click', () => {
                     display.focus();
                     display.value = entry.expression;
                     display.setSelectionRange(entry.expression.length, entry.expression.length);
                 });
-                
-                // 点击结果部分插入到当前输入
                 div.children[1].addEventListener('click', () => {
                     display.focus();
                     display.setRangeText(entry.result.toString(), display.selectionStart, display.selectionEnd, 'end');
                 });
-                
                 historyContainer.appendChild(div);
             });
+            historyContainer.scrollTop = historyContainer.scrollHeight;
         }
+    
+        initFunctionPanel();
+    
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.calculator')) {
+                functionPanel.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
